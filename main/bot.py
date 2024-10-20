@@ -1,12 +1,11 @@
-from cv2 import cv2
+import cv2  # No need for `from cv2 import cv2`
 import mss
 import numpy as np
 import os
 import time
-#from pynput.mouse import Button, Controller
 from pynput import mouse, keyboard
 import random
-import pydirectinput
+import pyautogui  # Replace pydirectinput with pyautogui for cross-platform compatibility
 
 class Fisher:
     def __init__(self):
@@ -40,41 +39,38 @@ class Fisher:
                 time.sleep(10)
                 continue
             if self.fish_count >= self.fish_limit:
-                    self.Sell_Fish()
-                    continue
-            #Reset click
+                self.Sell_Fish()
+                continue
+            # Reset click
             jitter = random.randint(-25, 25)
             cast_jitter = random.random()
-            pydirectinput.click(800 + jitter,800 + jitter)
+            pyautogui.click(800 + jitter, 800 + jitter)  # Replaced pydirectinput with pyautogui
             time.sleep(1)
-            self.Click_Location(800 + jitter,800 + jitter,.2 + cast_jitter)
+            self.Click_Location(800 + jitter, 800 + jitter, .2 + cast_jitter)
             print("Throwing line")
             time.sleep(11)
-            self.Click_Location(800 + jitter,800 + jitter,.5)
+            self.Click_Location(800 + jitter, 800 + jitter, .5)
             time.sleep(.5)
 
     def is_bobber(self):
         img = self.Screen_Shot()
-        bobber_img = cv2.imread(os.path.join(self.img_path, 'bobber.jpg'), cv2.IMREAD_UNCHANGED)
+        bobber_img = cv2.imread(os.path.join(self.img_path, 'bobber.jpg'), cv2.IMREAD_COLOR)
         result_try = cv2.matchTemplate(img, bobber_img, cv2.TM_CCOEFF_NORMED)
         _, max_val, _, max_loc = cv2.minMaxLoc(result_try)
-        if max_val > .9:
-            return True
-        else:
-            return False
+        return max_val > .9
 
     def Set_Bobber(self):
         while True:
             print("Reset Click.")
-            pydirectinput.click(800,800)
+            pyautogui.click(800, 800)
             time.sleep(.6)
-            self.Click_Location(800,800,1)
+            self.Click_Location(800, 800, 1)
             time.sleep(11)
-            pydirectinput.click(800,800)
+            pyautogui.click(800, 800)
             time.sleep(.6)
-            print("finding Bobber")
+            print("Finding Bobber")
             img = self.Screen_Shot()
-            bobber_img = cv2.imread(os.path.join(self.img_path, 'bobber.jpg'), cv2.IMREAD_UNCHANGED)
+            bobber_img = cv2.imread(os.path.join(self.img_path, 'bobber.jpg'), cv2.IMREAD_COLOR)
             result_try = cv2.matchTemplate(img, bobber_img, cv2.TM_CCOEFF_NORMED)
             _, max_val, _, max_loc = cv2.minMaxLoc(result_try)
             if max_val > .9:
@@ -83,23 +79,19 @@ class Fisher:
                 bar_top = new_max[1] - 20
                 bar_left = new_max[0]
                 return bar_left, bar_top
-
             print(f"Current Max: {max_val} sleeping")
 
     def close_caught_fish(self):
         max_loc, max_val = self.Template_Match("YellowX.jpg", self.Screen_Shot())
         if max_val > .9:
-            print("Pushing YellowX") 
+            print("Pushing YellowX")
             self.Click_Location(max_loc[0] + 10, max_loc[1] + 10)
             self.Click_Location(max_loc[0] + 5, max_loc[1] + 5)
-            # Means we caught a fish
             return True
         return False
 
     def Sell_Fish(self):
-
         # Get to store if we are not there...
-
         self.keyboard.press(keyboard.Key.up)
         time.sleep(8)
         self.keyboard.release(keyboard.Key.up)
@@ -115,28 +107,26 @@ class Fisher:
 
             # Look for sell button
             time.sleep(1)
-            print("Looking to for sell")
+            print("Looking for sell")
             max_loc, max_val = self.Template_Match("SellFor.jpg", self.Screen_Shot())
             if max_val > self.sell_threshold:
-                
-                print("Pushing Sell") 
+                print("Pushing Sell")
                 self.Click_Location(max_loc[0] + 40, max_loc[1] + 10)
                 time.sleep(1)
-                print("Looking to for sell Green")
+                print("Looking for sell Green")
                 max_loc, max_val = self.Template_Match("Sell.jpg", self.Screen_Shot())
                 while max_val > self.sell_threshold:
                     print("Pushing Sell Green")
                     self.Click_Location(max_loc[0] + 10, max_loc[1] + 10)
-
-                    # Get all the way through we return True for sold something
                     time.sleep(1)
                     max_loc, max_val = self.Template_Match("Sell.jpg", self.Screen_Shot())
                     time.sleep(1)
                     self.fish_count = 0
-        self.Click_Location(200,500)
-        self.Click_Location(200,500)
+
+        self.Click_Location(200, 500)
+        self.Click_Location(200, 500)
         time.sleep(1)
-        self.Click_Location(100,500)
+        self.Click_Location(100, 500)
         # Go back fishing...
         self.keyboard.press(keyboard.Key.down)
         time.sleep(8)
@@ -144,7 +134,7 @@ class Fisher:
         self.keyboard.press(keyboard.Key.down)
         time.sleep(2)
         self.keyboard.release(keyboard.Key.down)
-    
+
     def Screen_Shot(self, left=0, top=0, width=1920, height=1080):
         stc = mss.mss()
         scr = stc.grab({
@@ -155,22 +145,20 @@ class Fisher:
         })
 
         img = np.array(scr)
-        img = cv2.cvtColor(img, cv2.IMREAD_COLOR)
-
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)  # Correct color conversion
         return img
 
-    # Compare to images return max value / location
     def Template_Match(self, needle, haystack):
-        sell_box_img = cv2.imread(os.path.join(self.img_path, needle), cv2.IMREAD_UNCHANGED)
+        sell_box_img = cv2.imread(os.path.join(self.img_path, needle), cv2.IMREAD_COLOR)
         result_try = cv2.matchTemplate(haystack, sell_box_img, cv2.TM_CCOEFF_NORMED)
         _, max_val, _, max_loc = cv2.minMaxLoc(result_try)
-        return (max_loc, max_val)
+        return max_loc, max_val
 
     def Click_Location(self, x, y, wait=0):
-        pydirectinput.moveTo(x, y)
-        pydirectinput.mouseDown()
+        pyautogui.moveTo(x, y)
+        pyautogui.mouseDown()
         time.sleep(wait)
-        pydirectinput.mouseUp()
+        pyautogui.mouseUp()
 
     def start_fresh(self):
         time.sleep(5)
@@ -180,12 +168,12 @@ class Fisher:
         self.keyboard.release(keyboard.Key.ctrl)
         self.keyboard.release('r')
         time.sleep(1)
-        self.keyboard.press(keyboard.Key.enter) 
+        self.keyboard.press(keyboard.Key.enter)
         self.keyboard.release(keyboard.Key.enter)
 
 # Test our classes and functions
 if __name__ == "__main__":
-    print("Unless your testing run main.py")
+    print("Unless you're testing, run main.py")
     fisher = Fisher()
     time.sleep(5)
     fisher.Sell_Fish()
